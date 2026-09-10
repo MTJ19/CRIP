@@ -1,0 +1,19 @@
+
+Validation report for: /home/claude/data/synthetic/burn_in_synthetic_v1.csv
+Rows: 2400  |  Lots: 40
+
+Check                                                            Result  Detail
+--------------------------------------------------------------------------------------------------------------
+No impossible (negative) values                                  PASS    0 negative values found
+Missing-value rate in plausible range (0.5%-3%)                  PASS    observed rate = 0.0138
+No duplicate Component_ID within lot                             PASS    0 duplicates
+No component with all 4 checkpoints missing                      PASS    0 fully-missing rows
+Anomaly rate in plausible reliability-screening range (5%-20%)   PASS    observed = 0.1812
+Lot_ZScore correlates with Anomaly_Label but isn't a perfect predictorPASS    corr = 0.678
+Lot_Mean matches recomputation from raw values                   PASS    max diff = 5.68e-14
+No overlap between label columns and feature columns             PASS    overlap=set()
+Mean |Z-score| is higher for true anomalies than for normal componentsPASS    anomaly mean |Z|=1.62 vs normal mean |Z|=0.36
+Per-failure-mode Drift_96_168 means are meaningfully spread out  PASS    spread=243.25 vs overall std=77.28
+--------------------------------------------------------------------------------------------------------------
+
+10/10 checks passed.
