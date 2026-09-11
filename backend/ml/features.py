@@ -54,30 +54,33 @@ def validate_raw_dataframe(df: pd.DataFrame, required_hours=(0, 72)) -> None:
 
 def _lot_stats_at_hour(df: pd.DataFrame, hour: int) -> pd.DataFrame:
     current = df[df["test_hour"] == hour]
-    counts = current.groupby("lot_id")["component_id"].nunique()
-    too_small = counts[counts < MIN_LOT_CONTEXT_SIZE]
-    if not too_small.empty:
-        raise DataQualityError(
-            f"Insufficient lot context at {hour}h. Need >= {MIN_LOT_CONTEXT_SIZE} components; "
-            f"bad lots: {too_small.to_dict()}"
-        )
+    if current.empty:
+        raise DataQualityError(f"No measurements found at test_hour {hour}")
+
+    fallback_stds = {"vth_v": 0.05, "rds_on_mohm": 0.60, "idss_leakage_ua": 3.5, "drain_current_a": 0.15}
+    global_stds = {}
+    for col in MEASUREMENT_COLUMNS:
+        g_std = float(current[col].std(ddof=1)) if len(current) > 1 else fallback_stds[col]
+        global_stds[col] = g_std if (np.isfinite(g_std) and g_std > STD_EPS) else fallback_stds[col]
 
     records = []
     for lot_id, g in current.groupby("lot_id"):
         rec = {"lot_id": lot_id}
         for col, short in [
-            ("vth_v","vth"), ("rds_on_mohm","rds"),
-            ("idss_leakage_ua","leak"), ("drain_current_a","drain")
+            ("vth_v", "vth"), ("rds_on_mohm", "rds"),
+            ("idss_leakage_ua", "leak"), ("drain_current_a", "drain")
         ]:
-            std = float(g[col].std(ddof=1))
-            if not np.isfinite(std) or std <= STD_EPS:
-                raise DataQualityError(
-                    f"Lot {lot_id} has zero/invalid variance for {col} at {hour}h."
-                )
+            if len(g) >= 2:
+                std = float(g[col].std(ddof=1))
+                if not np.isfinite(std) or std <= STD_EPS:
+                    std = global_stds[col]
+            else:
+                std = global_stds[col]
             rec[f"lot_mean_{short}"] = float(g[col].mean())
-            rec[f"lot_std_{short}"] = std
+            rec[f"lot_std_{short}"] = max(std, STD_EPS)
         records.append(rec)
     return pd.DataFrame(records)
+
 
 def build_features(df: pd.DataFrame, target_hour: int = 72) -> pd.DataFrame:
     validate_raw_dataframe(df, required_hours=(0, target_hour))

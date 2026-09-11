@@ -5,7 +5,7 @@ import { GlassPanel, GlassHeader } from '@/components/ui-glass';
 import { 
   UploadCloud, FileEdit, ArrowRight, FileSpreadsheet, Check, Cpu, 
   AlertTriangle, ShieldAlert, Zap, Layers, ChevronDown, ChevronUp, 
-  ShieldCheck, TrendingUp, Activity, CheckCircle2, AlertCircle, RefreshCw
+  ShieldCheck, TrendingUp, Activity, CheckCircle2, AlertCircle, RefreshCw, Download
 } from 'lucide-react';
 import { api } from '@/services/api';
 
@@ -223,15 +223,26 @@ export default function WorkspacePage() {
                 <FileSpreadsheet className="w-7 h-7 text-indigo-400" />
               </div>
               <h3 className="text-base font-medium text-white mb-1">Upload MOSFET Raw Burn-In CSV</h3>
-              <p className="text-xs text-slate-400 max-w-md text-center mb-3">
-                Requires standard time-series columns (component_id, lot_id, test_hour, stress parameters, vth, rds, idss, drain)
+              <p className="text-xs text-slate-400 max-w-lg text-center mb-4 leading-relaxed">
+                Accepts standard MOSFET time-series (0h, 72h) or wide multi-checkpoint burn-in datasets (Parameter_0h, 24h, 96h, 168h). Automatically adapted & validated.
               </p>
-              <button 
-                disabled={isAnalyzing} 
-                className="bg-[#1c1f26] border border-white/10 hover:bg-white/10 text-white px-5 py-2 rounded-lg text-xs font-medium transition-colors"
-              >
-                [ Choose File ]
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button 
+                  disabled={isAnalyzing} 
+                  className="bg-[#1c1f26] border border-white/10 hover:bg-white/10 text-white px-5 py-2.5 rounded-lg text-xs font-medium transition-colors"
+                >
+                  [ Choose File ]
+                </button>
+                <a
+                  href="http://localhost:8000/api/dataset/sample-template"
+                  download="mosfet_burnin_sample_template.csv"
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-300 px-4 py-2.5 rounded-lg text-xs font-medium transition-colors flex items-center"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Download Sample Template CSV
+                </a>
+              </div>
             </div>
 
             {/* In-flight Loading State */}
@@ -248,9 +259,19 @@ export default function WorkspacePage() {
             {/* Error State Banner */}
             {uploadError && !isAnalyzing && (
               <div className="mt-6 font-mono text-xs bg-red-500/10 border border-red-500/30 p-5 rounded-xl text-red-300">
-                <div className="flex items-center font-bold text-red-200 mb-1">
-                  <AlertCircle className="w-4 h-4 mr-2 text-red-400" />
-                  Dataset Analysis Error (HTTP 422 DataQualityError)
+                <div className="flex flex-wrap items-center justify-between font-bold text-red-200 mb-1 gap-2">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-2 text-red-400" />
+                    Dataset Analysis Error
+                  </div>
+                  <a
+                    href="http://localhost:8000/api/dataset/sample-template"
+                    download="mosfet_burnin_sample_template.csv"
+                    className="text-xs font-normal underline text-indigo-300 hover:text-indigo-200 flex items-center"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1 text-indigo-400" />
+                    Download valid sample template CSV
+                  </a>
                 </div>
                 <div className="text-[11px] text-red-300/90 whitespace-pre-wrap pl-6">{uploadError}</div>
               </div>
