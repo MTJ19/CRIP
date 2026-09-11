@@ -5,10 +5,9 @@ export default function TopBarTitle() {
   const pathname = usePathname();
   
   let title = "Overview";
-  if (pathname === '/upload') title = "Workspace";
+  if (pathname === '/upload' || pathname.startsWith('/models')) title = "Workspace";
   else if (pathname.startsWith('/lot')) title = "Lots";
   else if (pathname.startsWith('/component')) title = "Components";
-  else if (pathname.startsWith('/models')) title = "ML Models";
   else if (pathname.startsWith('/risk')) title = "Risk Engine";
   else if (pathname.startsWith('/reports')) title = "Reports";
   else if (pathname.startsWith('/settings')) title = "Settings";

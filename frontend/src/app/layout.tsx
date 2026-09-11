@@ -19,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={`${inter.variable} ${mono.variable} font-sans bg-[#121418] text-slate-300 min-h-screen selection:bg-indigo-500/30`}>
+    <html lang="en" dir="ltr" data-scroll-behavior="smooth" className="scroll-smooth" suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${inter.variable} ${mono.variable} font-sans bg-[#121418] text-slate-300 min-h-screen selection:bg-indigo-500/30`}>
         {children}
       </body>
     </html>

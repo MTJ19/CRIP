@@ -227,6 +227,7 @@ function DashboardContent() {
                 alt="IRF540N Power MOSFET" 
                 width={192} 
                 height={192} 
+                priority
                 className="relative z-10 object-cover mix-blend-screen pointer-events-none rounded-2xl"
                 style={{
                   maskImage: 'radial-gradient(circle at center, black 50%, transparent 75%)',
