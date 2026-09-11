@@ -155,7 +155,7 @@ export default function WorkspacePage() {
     <div className="max-w-6xl mx-auto w-full flex flex-col space-y-8 pb-16">
       <GlassHeader 
         title="Workspace — MOSFET Burn-In Screening & Inference" 
-        subtitle="Single unified workspace for IRF540N raw burn-in dataset screening, component-level real-time evaluation, and ML performance verification." 
+        subtitle="Single unified workspace for raw burn-in dataset screening, manual component testing, and ML performance verification." 
       />
 
       {/* Top Controls: Mode Switcher & Dataset Loader */}
@@ -181,7 +181,7 @@ export default function WorkspacePage() {
             }`}
           >
             <FileEdit className="w-5 h-5 mr-3" />
-            IRF540N Component Tester
+            Component Test Manually
           </button>
         </div>
 
@@ -348,8 +348,8 @@ export default function WorkspacePage() {
           <div className="flex flex-col max-w-4xl mx-auto w-full">
             <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
               <div>
-                <h3 className="text-base font-bold text-white">IRF540N MOSFET Real-Time Inference</h3>
-                <p className="text-xs text-slate-400">Calls predict_from_raw() using Lot reference context at 72h</p>
+                <h3 className="text-base font-bold text-white">Component Test Manually (Real-Time Inference)</h3>
+                <p className="text-xs text-slate-400">Individual component evaluation against lot distribution context at 72h</p>
               </div>
               <div className="flex gap-2">
                 <button 
@@ -388,7 +388,10 @@ export default function WorkspacePage() {
                   onChange={e => setLotId(e.target.value)}
                   className="w-full bg-[#16181d] border border-white/10 rounded-lg px-3 py-2 text-white"
                 >
-                  {['L01', 'L02', 'L03', 'L04', 'L05', 'L06', 'L07', 'L08', 'L09', 'L10'].map(l => (
+                  {Array.from(new Set([
+                    ...(analysisResult?.lot_breakdown?.map((b: any) => b.lot_id) || []),
+                    'L01', 'L02', 'L03', 'L04', 'L05', 'L06', 'L07', 'L08', 'L09', 'L10'
+                  ])).map(l => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
@@ -469,7 +472,7 @@ export default function WorkspacePage() {
                   <span>Executing sih_mosfet_ml_v2 Model Bundle...</span>
                 </>
               ) : (
-                <span>Evaluate Component with sih_mosfet_ml_v2</span>
+                <span>Evaluate Component Manually</span>
               )}
             </button>
 
