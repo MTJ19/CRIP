@@ -1,10 +1,7 @@
 -- ============================================================================
 -- CRIP MOSFET Burn-In Screening Platform - Supabase Postgres Schema
+-- Note: gen_random_uuid() is natively built into PostgreSQL 13+ (no extensions required)
 -- ============================================================================
-
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ----------------------------------------------------------------------------
 -- 1. Table: lots
