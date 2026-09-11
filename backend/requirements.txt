@@ -9,3 +9,4 @@ numpy
 joblib
 python-dotenv
 scikit-learn==1.9.1
+gunicorn
