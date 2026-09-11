@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Layers, Cpu, Activity, ShieldAlert, FileText, Settings, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Layers, Cpu, FileText, Settings, Briefcase } from 'lucide-react';
 import { RoboticArmIcon } from './RoboticArmIcon';
 
 export default function Sidebar() {
@@ -14,7 +14,6 @@ export default function Sidebar() {
     { name: 'Workspace', href: '/upload', icon: Briefcase },
     { name: 'Lots', href: '/lot/L01', icon: Layers },
     { name: 'Components', href: '/component/M00001', icon: Cpu },
-    { name: 'Risk Engine', href: '/risk', icon: ShieldAlert },
     { name: 'Reports', href: '/reports', icon: FileText },
   ];
 
