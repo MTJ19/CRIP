@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Layers, Cpu, Activity, ShieldAlert, FileText, Settings, Briefcase, Box } from 'lucide-react';
+import { LayoutDashboard, Layers, Cpu, Activity, ShieldAlert, FileText, Settings, Briefcase } from 'lucide-react';
 import { RoboticArmIcon } from './RoboticArmIcon';
 
 export default function Sidebar() {
@@ -11,11 +11,10 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Workplace', href: '/upload', icon: Briefcase },
-    { name: 'Lots', href: '/lot/LOT_2026_00', icon: Layers },
-    { name: 'Components', href: '/component/CMP-0427', icon: Cpu },
-    { name: 'Anomalies', href: '/models', icon: Activity },
-    { name: 'Predictions', href: '/risk', icon: ShieldAlert },
+    { name: 'Workspace', href: '/upload', icon: Briefcase },
+    { name: 'Lots', href: '/lot/L01', icon: Layers },
+    { name: 'Components', href: '/component/M00001', icon: Cpu },
+    { name: 'Risk Engine', href: '/risk', icon: ShieldAlert },
     { name: 'Reports', href: '/reports', icon: FileText },
   ];
 
@@ -63,7 +62,7 @@ export default function Sidebar() {
         })}
       </div>
 
-      <div className="mt-auto flex flex-col space-y-4 w-full">
+      <div className="mt-auto flex flex-col space-y-2 w-full">
         <Link
           href="/settings"
           className={`h-10 rounded-xl flex items-center text-slate-500 hover:bg-white/5 hover:text-slate-300 transition-all overflow-hidden ${isExpanded ? 'w-full px-3' : 'w-10 justify-center'}`}

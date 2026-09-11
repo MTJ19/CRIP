@@ -31,12 +31,17 @@ export default function ComponentPage({ params }: { params: Promise<{ componentI
   return (
     <div className="max-w-6xl mx-auto w-full">
       <div className="mb-6 flex items-center space-x-4">
-        <Link href="/lot/LOT_2026_00" className="text-slate-400 hover:text-white transition-colors text-sm">
-          ← Back to Components
+        <Link href={`/lot/${component.lotId}`} className="text-slate-400 hover:text-white transition-colors text-sm">
+          ← Back to Lot {component.lotId}
         </Link>
         <div className="h-4 w-px bg-white/10"></div>
-        <GlassBadge className="bg-orange-500/10 text-orange-400 border-orange-500/20">
-          <AlertCircle className="w-3 h-3 mr-1.5" /> High Risk
+        <GlassBadge className={`${
+          component.risk === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+          component.risk === 'HIGH' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+          component.risk === 'MEDIUM' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+          'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        }`}>
+          <AlertCircle className="w-3 h-3 mr-1.5" /> {component.risk} RISK
         </GlassBadge>
       </div>
 

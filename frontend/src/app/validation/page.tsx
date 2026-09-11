@@ -109,7 +109,7 @@ export default function ValidationPage() {
                 <span>Replace Dataset</span>
               </button>
               <button 
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/dashboard')}
                 className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <span>Continue with warnings</span>

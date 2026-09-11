@@ -1,0 +1,88 @@
+{
+  "split": {
+    "train_lots": [
+      "L01",
+      "L02",
+      "L03",
+      "L04",
+      "L05",
+      "L06",
+      "L07"
+    ],
+    "validation_lots": [
+      "L08"
+    ],
+    "test_lots": [
+      "L09",
+      "L10"
+    ]
+  },
+  "anomaly_calibration": {
+    "method": "1% target false-positive rate on known-good validation reference parts",
+    "target_false_positive_rate": 0.01,
+    "threshold": 0.44712944849181757
+  },
+  "drift_calibration": {
+    "method": "validation cost minimization",
+    "false_negative_cost": 5.0,
+    "false_positive_cost": 1.0,
+    "threshold": 0.14
+  },
+  "test_metrics": {
+    "anomaly": {
+      "precision": 0.8444444444444444,
+      "recall": 0.95,
+      "f1": 0.8941176470588236,
+      "accuracy": 0.982,
+      "confusion_matrix": [
+        [
+          906,
+          14
+        ],
+        [
+          4,
+          76
+        ]
+      ]
+    },
+    "future_risk": {
+      "precision": 0.8727272727272727,
+      "recall": 0.8727272727272727,
+      "f1": 0.8727272727272727,
+      "accuracy": 0.986,
+      "confusion_matrix": [
+        [
+          938,
+          7
+        ],
+        [
+          7,
+          48
+        ]
+      ],
+      "roc_auc": 0.9690235690235689
+    }
+  },
+  "grouped_cross_validation": {
+    "anomaly_f1_by_fold": [
+      0.9398907103825137,
+      0.9241379310344827,
+      0.9202453987730062,
+      0.9273743016759777,
+      0.925
+    ],
+    "anomaly_f1_mean": 0.927329668373196,
+    "anomaly_f1_std": 0.007476349146276902,
+    "drift_f1_by_fold": [
+      0.8484848484848485,
+      0.7321428571428571,
+      0.9217391304347826,
+      0.8666666666666667,
+      0.84
+    ],
+    "drift_f1_mean": 0.841806700545831,
+    "drift_f1_std": 0.0690674156895836,
+    "drift_roc_auc_mean": 0.9779252225240389,
+    "drift_roc_auc_std": 0.009015437561087563
+  }
+}

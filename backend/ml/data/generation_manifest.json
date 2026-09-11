@@ -1,0 +1,15 @@
+{
+  "seed": 42,
+  "rows": 30000,
+  "components": 5000,
+  "lots": 10,
+  "hours": [
+    0,
+    24,
+    48,
+    72,
+    96,
+    120
+  ],
+  "anomaly_component_rate": 0.08
+}
