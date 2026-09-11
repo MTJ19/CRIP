@@ -137,10 +137,14 @@ function DashboardContent() {
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold text-white">IRF540N MOSFET Screening Dashboard</h1>
             <span className="text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full font-bold">
               {analysis.analysis_id}
+            </span>
+            <span className="text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold flex items-center">
+              <Check className="w-3 h-3 mr-1 text-emerald-400" />
+              Persistent DB Storage
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 font-mono">

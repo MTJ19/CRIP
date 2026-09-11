@@ -587,6 +587,14 @@ def predict_single_component(req: PredictRequest):
     if res.get("status") == "DATA_QUALITY_ERROR":
         raise HTTPException(status_code=422, detail=res.get("message", "Data quality error"))
 
+    # Persist single component test run into database
+    try:
+        import db
+        persisted = db.persist_single_component_test(lot_id, comp_history, res)
+        res.update(persisted)
+    except Exception as e:
+        print(f"Warning: error persisting single component test in DB: {e}")
+
     return res
 
 
@@ -649,8 +657,16 @@ async def analyze_dataset(
     # 3. Model scoring
     scored = score_features_dataframe(f_df)
 
-    # 4. Store analysis run
-    analysis_id = f"ANL-{uuid.uuid4().hex[:8].upper()}"
+    # 4. Persist to Database (Supabase Postgres or local persistent storage)
+    db_result = None
+    try:
+        import db
+        db_result = db.persist_batch_screening_run(df, filename, scored)
+        analysis_id = db_result["model_run_id"]
+    except Exception as e:
+        print(f"Warning: database persistence error: {e}")
+        analysis_id = f"ANL-{uuid.uuid4().hex[:8].upper()}"
+
     record = create_analysis_record(analysis_id, filename, df, scored)
     analyses[analysis_id] = record
     latest_analysis_id = analysis_id
@@ -661,15 +677,22 @@ async def analyze_dataset(
 
     return {
         "analysis_id": analysis_id,
+        "model_run_id": analysis_id,
         "filename": filename,
-        "total_components": record["summary"]["total_components"],
-        "anomalies_count": record["summary"]["total_anomalies"],
-        "predicted_failures_count": record["summary"]["predicted_future_failures"],
-        "high_risk_count": record["summary"]["high_risk_count"],
-        "critical_risk_count": record["summary"]["critical_risk_count"],
-        "lot_breakdown": record["lot_breakdown"],
+        "total_components": db_result["total_components"] if db_result else record["summary"]["total_components"],
+        "anomalies_count": db_result["anomalies_count"] if db_result else record["summary"]["total_anomalies"],
+        "predicted_failures_count": db_result["predicted_failures_count"] if db_result else record["summary"]["predicted_future_failures"],
+        "high_risk_count": db_result["high_risk_count"] if db_result else record["summary"]["high_risk_count"],
+        "critical_risk_count": db_result["critical_risk_count"] if db_result else record["summary"]["critical_risk_count"],
+        "medium_risk_count": db_result.get("medium_risk_count", 0) if db_result else 0,
+        "low_risk_count": db_result.get("low_risk_count", 0) if db_result else 0,
+        "lot_breakdown": db_result["lot_breakdown"] if db_result else record["lot_breakdown"],
         "checkpoints_detected": record["checkpoints_detected"],
-        "model_used": "sih_mosfet_ml_v2 (Isolation Forest + HistGradientBoostingClassifier)"
+        "model_used": "sih_mosfet_ml_v2 (Isolation Forest + HistGradientBoostingClassifier)",
+        "conflicts_count": db_result.get("conflicts_count", 0) if db_result else 0,
+        "rejected_count": db_result.get("rejected_count", 0) if db_result else 0,
+        "rejection_summary": db_result.get("rejection_summary", []) if db_result else [],
+        "persisted_in_db": bool(db_result)
     }
 
 
@@ -714,20 +737,55 @@ def download_sample_template():
 def get_analysis(analysis_id: str):
     """
     Returns full per-component results, lot breakdown, and alerts for a given analysis run.
-    If analysis_id == 'latest', returns the most recent analysis run.
+    Queries the persistent database (Supabase / Postgres) first so results survive page refresh.
     """
+    # 1. Query persistent database
+    try:
+        import db
+        db_data = db.query_latest_dashboard_analysis(target_run_id=analysis_id)
+        if db_data:
+            return db_data
+    except Exception as e:
+        print(f"Warning: database query error in get_analysis: {e}")
+
+    # 2. In-memory cache fallback
     if analysis_id == "latest":
         if latest_analysis_id and latest_analysis_id in analyses:
             return analyses[latest_analysis_id]
         if analyses:
             first_key = next(reversed(analyses.keys()))
             return analyses[first_key]
-        raise HTTPException(status_code=404, detail="No analyses found. Please run an analysis in Workspace first.")
+        raise HTTPException(status_code=404, detail="No analyses found in database or memory.")
 
     if analysis_id not in analyses:
         raise HTTPException(status_code=404, detail=f"Analysis '{analysis_id}' not found.")
 
     return analyses[analysis_id]
+
+
+@app.get("/api/db/runs")
+def list_database_model_runs():
+    """
+    Returns all historical model runs stored in the database.
+    """
+    try:
+        import db
+        s = db.SessionLocal()
+        runs = s.query(db.ModelRun).order_by(db.ModelRun.created_at.desc()).limit(50).all()
+        result = [
+            {
+                "id": r.id,
+                "run_type": r.run_type,
+                "source_filename": r.source_filename,
+                "triggered_by": r.triggered_by,
+                "created_at": r.created_at.isoformat() if r.created_at else ""
+            }
+            for r in runs
+        ]
+        s.close()
+        return {"runs": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

@@ -1,5 +1,6 @@
 import { Lot } from '../data/demoLots';
 import { ComponentDetails } from '../data/demoComponents';
+import { getLatestDashboardAnalysisFromSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -151,11 +152,30 @@ export const api = {
   },
 
   getAnalysis: async (analysisId: string) => {
+    // 1. If Supabase client is configured, query Supabase tables directly
+    if (isSupabaseConfigured()) {
+      try {
+        const supabaseData = await getLatestDashboardAnalysisFromSupabase(analysisId);
+        if (supabaseData) {
+          return supabaseData;
+        }
+      } catch (e) {
+        console.warn("Direct Supabase query failed, falling back to backend API:", e);
+      }
+    }
+
+    // 2. Fetch from backend API (which also queries persistent database)
     const res = await fetch(`${API_BASE}/analyze/${analysisId}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}: Analysis not found` }));
       throw new Error(err.detail || "Failed to fetch analysis");
     }
+    return await res.json();
+  },
+
+  getModelRuns: async () => {
+    const res = await fetch(`${API_BASE}/db/runs`);
+    if (!res.ok) throw new Error("Failed to fetch model runs");
     return await res.json();
   },
 

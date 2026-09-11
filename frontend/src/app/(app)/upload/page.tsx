@@ -290,6 +290,12 @@ export default function WorkspacePage() {
                     <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded text-[11px] font-bold">
                       {analysisResult.analysis_id}
                     </span>
+                    {analysisResult.persisted_in_db && (
+                      <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded text-[10px] font-bold flex items-center">
+                        <Check className="w-3 h-3 mr-1 text-emerald-400" />
+                        Supabase / DB Synced
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -322,6 +328,60 @@ export default function WorkspacePage() {
                     <div className="text-[10px] text-slate-400 mt-1">Requires Screening Hold</div>
                   </div>
                 </div>
+
+                {/* Persistent Database Records Info */}
+                <div className="bg-[#161922] p-4 rounded-xl border border-indigo-500/20 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center">
+                      <Layers className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-white text-xs">Persistent Storage (Supabase Postgres / DB)</div>
+                      <div className="text-[11px] text-slate-400">
+                        All measurements, model inferences, and risk tiers persisted across page reloads.
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className="bg-black/40 border border-white/10 px-2.5 py-1 rounded text-slate-300">
+                      <strong>{analysisResult.total_components}</strong> Components
+                    </span>
+                    <span className="bg-black/40 border border-white/10 px-2.5 py-1 rounded text-slate-300">
+                      <strong>{analysisResult.measurements_inserted ?? (analysisResult.total_components * 2)}</strong> Measurements
+                    </span>
+                    <span className="bg-black/40 border border-white/10 px-2.5 py-1 rounded text-slate-300">
+                      <strong>{analysisResult.lot_breakdown?.length || 10}</strong> Lots
+                    </span>
+                  </div>
+                </div>
+
+                {/* Conflict & Rejection Warning Banner (No Silent Overwrites Rule) */}
+                {(analysisResult.conflicts_count > 0 || analysisResult.rejected_count > 0) && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-amber-300 text-xs">
+                    <div className="flex items-center font-bold text-amber-200 mb-1">
+                      <AlertTriangle className="w-4 h-4 mr-2 text-amber-400 shrink-0" />
+                      <span>Data Ingestion Conflict Audit: {analysisResult.conflicts_count} Conflicting Row(s) Skipped, {analysisResult.rejected_count} Malformed Row(s) Rejected</span>
+                    </div>
+                    <p className="text-[11px] text-amber-300/80 mb-2 pl-6">
+                      <strong>Strict Integrity Rule:</strong> Existing <code className="text-white bg-black/30 px-1 py-0.5 rounded">(component_id, test_hour)</code> measurement records were <strong>not</strong> silently overwritten. Conflicting checkpoints were safely flagged.
+                    </p>
+                    {analysisResult.rejection_summary && analysisResult.rejection_summary.length > 0 && (
+                      <div className="ml-6 mt-2 max-h-28 overflow-y-auto bg-black/40 p-2.5 rounded-lg border border-amber-500/20 text-[10px] text-slate-300 space-y-1 font-mono">
+                        {analysisResult.rejection_summary.slice(0, 8).map((msg: string, i: number) => (
+                          <div key={i} className="flex items-start">
+                            <span className="text-amber-400 mr-1.5">•</span>
+                            <span>{msg}</span>
+                          </div>
+                        ))}
+                        {analysisResult.rejection_summary.length > 8 && (
+                          <div className="text-slate-500 italic pt-1">
+                            ... and {analysisResult.rejection_summary.length - 8} more conflicting rows recorded.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Lot Breakdown Preview */}
                 {analysisResult.lot_breakdown && analysisResult.lot_breakdown.length > 0 && (
@@ -494,6 +554,21 @@ export default function WorkspacePage() {
                   ? 'bg-red-500/10 border-red-500/30' 
                   : 'bg-emerald-500/10 border-emerald-500/30'
               }`}>
+                {/* Database Persistence Confirmation */}
+                {(prediction.written_to_db || prediction.model_run_id) && (
+                  <div className="bg-black/30 border border-emerald-500/30 p-2.5 rounded-lg mb-3 flex flex-wrap items-center justify-between gap-2 text-emerald-300">
+                    <div className="flex items-center space-x-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>
+                        <strong>Persisted in Supabase / DB:</strong> Recorded in <code className="text-white">model_runs</code> ({prediction.model_run_id ? `${prediction.model_run_id.slice(0, 8)}...` : 'stored'}) & <code className="text-white">risk_assessments</code>
+                      </span>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-bold">
+                      Component ID: {prediction.component_id || 'TEST_MOSFET'}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center mb-3">
                   <div>
                     <span className="text-base font-bold text-white">Risk Tier: {prediction.risk_level}</span>

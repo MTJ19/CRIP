@@ -16,6 +16,13 @@ out/
 build/
 dist/
 
+# Databases & Local Envs
+*.db
+*.sqlite
+*.sqlite3
+.env*.local
+.env
+
 # IDE / System
 .vscode/
 .idea/
