@@ -12,9 +12,16 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
-# Load environment variables if python-dotenv is available
+# Load environment variables from root or local .env
 try:
     from dotenv import load_dotenv
+    from pathlib import Path
+    _root_env = Path(__file__).resolve().parent.parent / ".env"
+    if _root_env.exists():
+        load_dotenv(dotenv_path=_root_env)
+    _local_env = Path(__file__).resolve().parent / ".env"
+    if _local_env.exists():
+        load_dotenv(dotenv_path=_local_env)
     load_dotenv()
 except ImportError:
     pass
@@ -40,7 +47,7 @@ else:
 is_sqlite = DATABASE_URL.startswith("sqlite")
 connect_args = {"check_same_thread": False} if is_sqlite else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 Base = declarative_base()
 
 
@@ -174,6 +181,39 @@ def init_db():
 
 # Run initialization on import
 init_db()
+
+
+def sync_to_supabase_rest(table: str, records: List[Dict[str, Any]], on_conflict: Optional[str] = None):
+    """
+    Directly synchronizes rows to the remote Supabase Cloud PostgreSQL REST endpoint.
+    """
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_key or not records:
+        return
+
+    try:
+        import urllib.request
+        import json
+
+        url = f"{supabase_url.rstrip('/')}/rest/v1/{table}"
+        if on_conflict:
+            url += f"?on_conflict={on_conflict}"
+
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates" if on_conflict else "return=minimal"
+        }
+
+        for i in range(0, len(records), 300):
+            chunk = records[i:i+300]
+            req = urllib.request.Request(url, data=json.dumps(chunk).encode(), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                pass
+    except Exception as e:
+        print(f"Note: Supabase REST sync for {table}: {e}")
 
 
 # ============================================================================
@@ -401,7 +441,40 @@ def persist_batch_screening_run(
         if risk_objects:
             db.bulk_save_objects(risk_objects)
 
+        # Extract primitive records for Supabase Cloud sync before session closes
+        sync_lots = [{'id': str(l.id), 'lot_code': str(l.lot_code), 'component_type': str(l.component_type), 'created_at': l.created_at.isoformat()} for l in existing_lots.values()]
+        sync_comps = [{'id': str(c.id), 'lot_id': str(c.lot_id), 'component_external_id': str(c.component_external_id), 'created_at': c.created_at.isoformat()} for c in comp_map.values()]
+        sync_run = [{'id': str(model_run.id), 'run_type': str(model_run.run_type), 'source_filename': model_run.source_filename, 'triggered_by': str(model_run.triggered_by), 'created_at': model_run.created_at.isoformat()}]
+        sync_meas = [{
+            'id': str(m.id), 'component_id': str(m.component_id), 'test_hour': int(m.test_hour),
+            'stress_temp_c': float(m.stress_temp_c), 'stress_vds_v': float(m.stress_vds_v), 'gate_drive_v': float(m.gate_drive_v),
+            'vth_v': float(m.vth_v), 'rds_on_mohm': float(m.rds_on_mohm), 'idss_leakage_ua': float(m.idss_leakage_ua), 'drain_current_a': float(m.drain_current_a),
+            'created_at': m.created_at.isoformat()
+        } for m in measurements_to_insert]
+        sync_anom = [{'id': str(a.id), 'model_run_id': str(a.model_run_id), 'component_id': str(a.component_id), 'anomaly_risk_score': float(a.anomaly_risk_score), 'anomaly_threshold': float(a.anomaly_threshold), 'is_anomaly': bool(a.is_anomaly), 'created_at': a.created_at.isoformat()} for a in anom_objects]
+        sync_drift = [{'id': str(d.id), 'model_run_id': str(d.model_run_id), 'component_id': str(d.component_id), 'future_failure_probability': float(d.future_failure_probability), 'future_failure_threshold': float(d.future_failure_threshold), 'predicted_future_failure': bool(d.predicted_future_failure), 'created_at': d.created_at.isoformat()} for d in drift_objects]
+        sync_risk = [{'id': str(r.id), 'model_run_id': str(r.model_run_id), 'component_id': str(r.component_id), 'risk_level': str(r.risk_level), 'main_reason': str(r.main_reason), 'recommended_action': str(r.recommended_action), 'created_at': r.created_at.isoformat()} for r in risk_objects]
+
         db.commit()
+
+        # Cloud Supabase REST sync in background
+        try:
+            import threading
+            def _async_sync_batch():
+                sync_to_supabase_rest("lots", sync_lots, on_conflict="lot_code")
+                sync_to_supabase_rest("components", sync_comps, on_conflict="lot_id,component_external_id")
+                sync_to_supabase_rest("model_runs", sync_run, on_conflict="id")
+                if sync_meas:
+                    sync_to_supabase_rest("component_measurements", sync_meas, on_conflict="component_id,test_hour")
+                if sync_anom:
+                    sync_to_supabase_rest("anomaly_results", sync_anom, on_conflict="id")
+                if sync_drift:
+                    sync_to_supabase_rest("drift_predictions", sync_drift, on_conflict="id")
+                if sync_risk:
+                    sync_to_supabase_rest("risk_assessments", sync_risk, on_conflict="id")
+            threading.Thread(target=_async_sync_batch, daemon=True).start()
+        except Exception as batch_sync_err:
+            print(f"Note: Async batch Supabase sync exception: {batch_sync_err}")
 
         # Build real lot breakdown pulled directly from DB
         lot_breakdown = []
@@ -553,22 +626,58 @@ def persist_single_component_test(
         )
         db.add(risk)
 
+        # Extract primitive values safely before commit & background sync
+        ret_model_run_id = str(model_run.id)
+        ret_lot_id = str(lot.id)
+        ret_lot_code = str(lot.lot_code)
+        ret_component_id = str(component.id)
+        ret_anom_score = float(anom.anomaly_risk_score)
+        ret_anom_thresh = float(anom.anomaly_threshold)
+        ret_is_anom = bool(anom.is_anomaly)
+        ret_drift_prob = float(drift.future_failure_probability)
+        ret_drift_thresh = float(drift.future_failure_threshold)
+        ret_pred_drift = bool(drift.predicted_future_failure)
+        ret_risk_level = str(risk.risk_level)
+        ret_main_reason = str(risk.main_reason)
+        ret_rec_action = str(risk.recommended_action)
+
+        sync_lot_records = [{'id': ret_lot_id, 'lot_code': ret_lot_code, 'component_type': str(lot.component_type), 'created_at': lot.created_at.isoformat()}]
+        sync_comp_records = [{'id': ret_component_id, 'lot_id': ret_lot_id, 'component_external_id': ext_id, 'created_at': component.created_at.isoformat()}]
+        sync_run_records = [{'id': ret_model_run_id, 'run_type': str(model_run.run_type), 'source_filename': model_run.source_filename, 'triggered_by': str(model_run.triggered_by), 'created_at': model_run.created_at.isoformat()}]
+        sync_anom_records = [{'id': str(anom.id), 'model_run_id': ret_model_run_id, 'component_id': ret_component_id, 'anomaly_risk_score': ret_anom_score, 'anomaly_threshold': ret_anom_thresh, 'is_anomaly': ret_is_anom, 'created_at': anom.created_at.isoformat()}]
+        sync_drift_records = [{'id': str(drift.id), 'model_run_id': ret_model_run_id, 'component_id': ret_component_id, 'future_failure_probability': ret_drift_prob, 'future_failure_threshold': ret_drift_thresh, 'predicted_future_failure': ret_pred_drift, 'created_at': drift.created_at.isoformat()}]
+        sync_risk_records = [{'id': str(risk.id), 'model_run_id': ret_model_run_id, 'component_id': ret_component_id, 'risk_level': ret_risk_level, 'main_reason': ret_main_reason, 'recommended_action': ret_rec_action, 'created_at': risk.created_at.isoformat()}]
+
         db.commit()
+
+        # Cloud Supabase REST sync in background with detached primitive payloads
+        try:
+            import threading
+            def _async_sync_single():
+                sync_to_supabase_rest("lots", sync_lot_records, on_conflict="lot_code")
+                sync_to_supabase_rest("components", sync_comp_records, on_conflict="lot_id,component_external_id")
+                sync_to_supabase_rest("model_runs", sync_run_records, on_conflict="id")
+                sync_to_supabase_rest("anomaly_results", sync_anom_records, on_conflict="id")
+                sync_to_supabase_rest("drift_predictions", sync_drift_records, on_conflict="id")
+                sync_to_supabase_rest("risk_assessments", sync_risk_records, on_conflict="id")
+            threading.Thread(target=_async_sync_single, daemon=True).start()
+        except Exception as sync_err:
+            print(f"Note: Async Supabase sync exception: {sync_err}")
 
         return {
             "status": "OK",
-            "model_run_id": model_run.id,
+            "model_run_id": ret_model_run_id,
             "component_id": ext_id,
-            "lot_id": lot_code,
-            "anomaly_risk_score": anom.anomaly_risk_score,
-            "anomaly_threshold": anom.anomaly_threshold,
-            "is_anomaly": anom.is_anomaly,
-            "future_failure_probability": drift.future_failure_probability,
-            "future_failure_threshold": drift.future_failure_threshold,
-            "predicted_future_failure": drift.predicted_future_failure,
-            "risk_level": risk.risk_level,
-            "main_reason": risk.main_reason,
-            "recommended_action": risk.recommended_action,
+            "lot_id": ret_lot_code,
+            "anomaly_risk_score": ret_anom_score,
+            "anomaly_threshold": ret_anom_thresh,
+            "is_anomaly": ret_is_anom,
+            "future_failure_probability": ret_drift_prob,
+            "future_failure_threshold": ret_drift_thresh,
+            "predicted_future_failure": ret_pred_drift,
+            "risk_level": ret_risk_level,
+            "main_reason": ret_main_reason,
+            "recommended_action": ret_rec_action,
             "written_to_db": True
         }
 
