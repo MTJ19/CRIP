@@ -214,6 +214,7 @@ export async function getLatestDashboardAnalysisFromSupabase(targetRunId?: strin
 
     const failureModeDistribution = Object.entries(modeCounts).map(([name, count]) => ({
       name,
+      value: count,
       count
     }));
 

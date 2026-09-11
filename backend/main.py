@@ -515,34 +515,33 @@ def predict_single_component(req: PredictRequest):
     drain_tgt = req.drain_target if req.drain_target is not None else (req.drain72h if req.drain72h is not None else (req.drain_current_a_target if req.drain_current_a_target is not None else 16.1))
 
     # Resolve reference lot snapshot of >= 30 components at target_h
+    # Requirement 2: "On submit, look up (or create) the relevant lot's measurement context from component_measurements for lot-relative z-scores"
     lot_snapshot = pd.DataFrame()
 
-    # 1. Look for lot_id in currently active raw_df
-    if not raw_df.empty and "lot_id" in raw_df.columns and "test_hour" in raw_df.columns:
+    # 1. Query persistent database component_measurements
+    try:
+        import db
+        lot_snapshot = db.get_or_create_lot_measurement_context(lot_code=str(lot_id), target_hour=int(target_h))
+    except Exception as e:
+        print(f"Note: error querying component_measurements for lot {lot_id}: {e}")
+
+    # 2. If not found in DB, check active raw_df
+    if (lot_snapshot.empty or len(lot_snapshot) < 30) and not raw_df.empty and "lot_id" in raw_df.columns and "test_hour" in raw_df.columns:
         match = raw_df[(raw_df["lot_id"].astype(str) == str(lot_id)) & (raw_df["test_hour"] == target_h)]
         if len(match) >= 30:
             lot_snapshot = match.copy()
 
-    # 2. If not found in raw_df, check standard reference baseline dataset (raw_burnin_data.csv)
+    # 3. Fallback to standard reference baseline dataset (raw_burnin_data.csv)
     if (lot_snapshot.empty or len(lot_snapshot) < 30) and raw_data_path.exists():
         ref_df = pd.read_csv(raw_data_path)
         match = ref_df[(ref_df["lot_id"].astype(str) == str(lot_id)) & (ref_df["test_hour"] == target_h)]
         if len(match) >= 30:
             lot_snapshot = match.copy()
         else:
-            # Fallback to standard lot L01 (500 components at 72h) and align lot_id
             default_ref = ref_df[(ref_df["lot_id"] == "L01") & (ref_df["test_hour"] == target_h)]
             if len(default_ref) >= 30:
                 lot_snapshot = default_ref.copy()
                 lot_snapshot["lot_id"] = lot_id
-
-    # 3. If still empty, use any available lot from raw_df with >= 30 components
-    if (lot_snapshot.empty or len(lot_snapshot) < 30) and not raw_df.empty and "lot_id" in raw_df.columns and "test_hour" in raw_df.columns:
-        counts = raw_df[raw_df["test_hour"] == target_h]["lot_id"].value_counts()
-        valid_lots = counts[counts >= 30].index.tolist()
-        if valid_lots:
-            lot_snapshot = raw_df[(raw_df["lot_id"] == valid_lots[0]) & (raw_df["test_hour"] == target_h)].copy()
-            lot_snapshot["lot_id"] = lot_id
 
     if lot_snapshot.empty or len(lot_snapshot) < 30:
         raise HTTPException(
@@ -864,6 +863,33 @@ def get_ml_metrics():
 # ============================================================================
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary():
+    # 1. Query persistent database first
+    try:
+        import db
+        latest_analysis = db.query_latest_dashboard_analysis()
+        if latest_analysis and "summary" in latest_analysis:
+            s = latest_analysis["summary"]
+            return {
+                "component": {
+                    "name": "IRF540N",
+                    "type": "N-channel power MOSFET",
+                    "specification": "VDS: 100V, VGS(th): 2-4V, RDS(on) max: 44 mΩ"
+                },
+                "metrics": {
+                    "totalLots": len(latest_analysis.get("lot_breakdown", [])),
+                    "totalComponents": s["total_components"],
+                    "totalAnomalies": s["total_anomalies"],
+                    "anomalyRate": s["anomaly_rate"],
+                    "highRiskCount": s["high_risk_count"],
+                    "criticalRiskCount": s["critical_risk_count"],
+                    "predictedFutureFailures": s["predicted_future_failures"]
+                },
+                "riskDistribution": [{"name": k, "value": v} for k, v in s.get("risk_distribution", {}).items()],
+                "failureModeDistribution": s.get("failure_mode_distribution", [])
+            }
+    except Exception as e:
+        print(f"Note: error querying dashboard summary from DB: {e}")
+
     try:
         total_lots = int(scored_df["lot_id"].nunique()) if "lot_id" in scored_df.columns else 10
         total_components = len(scored_df)
@@ -902,6 +928,28 @@ def get_dashboard_summary():
 
 @app.get("/api/lots")
 def get_lots():
+    # 1. Query persistent database first
+    try:
+        import db
+        latest_analysis = db.query_latest_dashboard_analysis()
+        if latest_analysis and "lot_breakdown" in latest_analysis and latest_analysis["lot_breakdown"]:
+            lots_data = [
+                {
+                    "lotId": str(l["lot_id"]),
+                    "componentType": "IRF540N Power MOSFET",
+                    "totalComponents": l["total_components"],
+                    "anomalyCount": l["anomalies_count"],
+                    "anomalyRate": l.get("anomaly_rate", 0.0),
+                    "criticalCount": l.get("critical_risk_count", 0),
+                    "highCount": l.get("high_risk_count", 0),
+                    "checkpoint": l.get("checkpoint", "72h (Screening) / 120h (Horizon)")
+                }
+                for l in latest_analysis["lot_breakdown"]
+            ]
+            return {"lots": lots_data}
+    except Exception as e:
+        print(f"Note: error querying lots from DB: {e}")
+
     try:
         lots_data = []
         for lot_id, group in scored_df.groupby("lot_id"):
@@ -928,6 +976,15 @@ def get_lots():
 
 @app.get("/api/lots/{lot_id}/components")
 def get_lot_components(lot_id: str):
+    # 1. Query persistent database first
+    try:
+        import db
+        db_comps = db.query_lot_components(lot_code=lot_id)
+        if db_comps:
+            return {"components": db_comps}
+    except Exception as e:
+        print(f"Note: error querying lot components from DB: {e}")
+
     try:
         lot_df = scored_df[scored_df["lot_id"].astype(str) == str(lot_id)]
         if lot_df.empty:
@@ -956,6 +1013,15 @@ def get_lot_components(lot_id: str):
 
 @app.get("/api/components/{component_id}")
 def get_component(component_id: str):
+    # 1. Query persistent database first
+    try:
+        import db
+        db_comp = db.query_component_details(component_id=component_id)
+        if db_comp:
+            return db_comp
+    except Exception as e:
+        print(f"Note: error querying component details from DB: {e}")
+
     try:
         comp_match = scored_df[scored_df["component_id"].astype(str) == str(component_id)]
         if comp_match.empty:
