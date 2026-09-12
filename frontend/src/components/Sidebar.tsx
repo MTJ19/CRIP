@@ -34,10 +34,9 @@ export default function Sidebar() {
             <RoboticArmIcon className="w-10 h-10" />
           </div>
           {isExpanded && (
-            <div className="ml-3 flex flex-col">
-              <span className="font-bold text-white tracking-widest text-base group-hover:text-indigo-400 transition-colors">CRIP</span>
-              <span className="text-[9px] text-slate-500 uppercase tracking-wider font-mono">Reliability AI</span>
-            </div>
+            <span className="ml-3 font-bold text-white tracking-widest text-base group-hover:text-indigo-400 transition-colors">
+              CRIP
+            </span>
           )}
         </Link>
       </div>
