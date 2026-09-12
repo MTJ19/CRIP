@@ -29,7 +29,9 @@ export default function AnalysisContextIndicator() {
       >
         <div className="flex items-center space-x-1.5">
           <span className="text-slate-500 uppercase text-[10px] tracking-wider">Analysis:</span>
-          <span className="text-white font-bold">{analysisId?.slice(0, 12)}</span>
+          <span className="text-white font-bold">
+            {analysisId?.startsWith('ANL-') ? `#${analysisId}` : `#ANL-${analysisId?.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase() || '00042'}`}
+          </span>
         </div>
 
         <span className="text-slate-600">•</span>
@@ -72,6 +74,9 @@ export default function AnalysisContextIndicator() {
               ) : (
                 analysesList.slice(0, 8).map(run => {
                   const isSelected = run.analysis_id === analysisId || run.id === analysisId;
+                  const displayRunId = run.analysis_id.startsWith('ANL-') 
+                    ? `#${run.analysis_id}` 
+                    : `#ANL-${run.analysis_id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase()}`;
                   return (
                     <button
                       key={run.id}
@@ -88,7 +93,7 @@ export default function AnalysisContextIndicator() {
                           <span>{run.source_filename}</span>
                         </div>
                         <div className="text-[10px] text-slate-500 flex items-center space-x-2 mt-0.5">
-                          <span className="text-indigo-400 font-semibold">{run.analysis_id.slice(0, 10)}</span>
+                          <span className="text-indigo-400 font-semibold">{displayRunId}</span>
                           <span>•</span>
                           <span>{run.total_components} parts</span>
                           <span>•</span>
@@ -111,7 +116,7 @@ export default function AnalysisContextIndicator() {
                 onClick={() => setIsOpen(false)}
                 className="w-full text-center block py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] transition-colors"
               >
-                + Ingest New Screening Run
+                + Upload New Screening Run
               </Link>
             </div>
           </div>

@@ -110,20 +110,25 @@ export default function DashboardPage() {
   // Real chart data for failure modes
   const failureModeData = summary.failure_mode_distribution?.filter((m) => m.name !== 'NORMAL') || [];
 
+  const displayAnalysisId = currentAnalysis.analysis_id.startsWith('ANL-')
+    ? currentAnalysis.analysis_id
+    : `ANL-${currentAnalysis.analysis_id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase()}`;
+
   return (
     <div className="flex flex-col space-y-6 pb-16">
       
       {/* Overview Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl font-bold text-white">IRF540N MOSFET Screening Overview</h1>
-            <span className="text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full font-bold">
-              {currentAnalysis.analysis_id}
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
-            Source: <span className="text-slate-300 font-bold">{currentAnalysis.filename}</span> • 72h Early Screening Checkpoint
+          <h1 className="text-xl font-bold text-white tracking-tight">Burn-In Screening Overview</h1>
+          <p className="text-xs text-slate-400 mt-1 font-mono flex flex-wrap items-center gap-1.5">
+            <span className="text-slate-200 font-semibold">IRF540N Power MOSFET</span>
+            <span className="text-slate-600">·</span>
+            <span>Analysis #{displayAnalysisId}</span>
+            <span className="text-slate-600">•</span>
+            <span>Source: <span className="text-slate-300 font-medium">{currentAnalysis.filename}</span></span>
+            <span className="text-slate-600">•</span>
+            <span>72h Early Screening Checkpoint</span>
           </p>
         </div>
 
@@ -132,7 +137,7 @@ export default function DashboardPage() {
             href="/upload"
             className="flex items-center px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-mono border border-white/10 transition-colors"
           >
-            Workspace / Ingest New Data →
+            Upload New Screening Data →
           </Link>
         </div>
       </div>
@@ -192,15 +197,26 @@ export default function DashboardPage() {
 
       {/* TOP CHARTS: Component Specs & Degradation Modes (PART 4) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT: Physical Specs Card */}
+        {/* LEFT: Component Reference Card */}
         <GlassPanel className="lg:col-span-4 p-6 flex flex-col justify-between relative overflow-hidden">
           <div className="flex justify-between items-start mb-4">
-            <GlassBadge className="bg-white/5 border-white/10 text-white text-xs">
-              <Cpu className="w-3.5 h-3.5 mr-1.5 text-indigo-400" /> IRF540N MOSFET
-            </GlassBadge>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-              Infineon Datasheet
-            </span>
+            <div>
+              <h2 className="text-base font-bold text-white tracking-tight">Component Reference</h2>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">IRF540N Power MOSFET</p>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full font-medium">
+                Reference specifications
+              </span>
+              <a 
+                href="https://www.infineon.com" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="text-[9px] font-mono text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Infineon Datasheet ↗
+              </a>
+            </div>
           </div>
 
           <div className="flex items-center justify-center my-3 relative">

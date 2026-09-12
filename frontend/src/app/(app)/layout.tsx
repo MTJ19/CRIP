@@ -4,7 +4,6 @@ import Sidebar from "@/components/Sidebar";
 import TopBarTitle from "@/components/TopBarTitle";
 import { AnalysisProvider } from "@/context/AnalysisContext";
 import AnalysisContextIndicator from "@/components/AnalysisContextIndicator";
-import DbStatusBadge from "@/components/DbStatusBadge";
 
 export default function AppLayout({
   children,
@@ -27,8 +26,6 @@ export default function AppLayout({
             </div>
 
             <div className="flex items-center space-x-4">
-              <DbStatusBadge />
-
               <div className="flex items-center space-x-2.5 bg-[#16181d] border border-white/10 rounded-full py-1 pr-3.5 pl-1.5 shadow-sm">
                 <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-300 font-bold text-xs border border-indigo-500/30">
                   QA

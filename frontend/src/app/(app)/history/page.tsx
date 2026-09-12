@@ -138,7 +138,9 @@ export default function AnalysisHistoryPage() {
                     <tr key={run.id} className="hover:bg-white/5 transition-colors group">
                       <td className="py-3.5 px-4 font-bold text-white">
                         <span className="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded text-[11px]">
-                          {run.analysis_id.slice(0, 10)}
+                          {run.analysis_id.startsWith('ANL-') 
+                            ? `#${run.analysis_id}` 
+                            : `#ANL-${run.analysis_id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase()}`}
                         </span>
                       </td>
 
