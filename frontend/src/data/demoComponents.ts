@@ -11,6 +11,7 @@ export interface ComponentDetails {
   risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   status: string;
   reasons?: string;
+  primaryRiskFactor?: string;
 }
 
 export function getDemoComponentsForLot(lotId: string): ComponentDetails[] {

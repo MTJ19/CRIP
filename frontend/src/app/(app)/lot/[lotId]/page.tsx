@@ -41,13 +41,12 @@ export default function LotPage({ params }: { params: Promise<{ lotId: string }>
     checkpoint: string;
   } | null>(null);
   const [fallbackComponents, setFallbackComponents] = useState<AnalysisComponent[]>([]);
-  const [loadingFallback, setLoadingFallback] = useState(false);
+  const [isFetching, setIsFetching] = useState(!contextLot);
 
   useEffect(() => {
-    if (contextLot) return; // No need to fetch if already in context
+    if (contextLot) return;
 
     let isMounted = true;
-    setLoadingFallback(true);
 
     Promise.all([
       api.getLot(lotId),
@@ -64,24 +63,27 @@ export default function LotPage({ params }: { params: Promise<{ lotId: string }>
           checkpoint: l.checkpoint
         });
       }
-      setFallbackComponents(comps.map(c => ({
-        component_id: c.id,
-        lot_id: c.lotId,
-        risk_level: c.risk,
-        is_anomaly: c.lotRelativeBehaviour === 'ANOMALOUS',
-        anomaly_risk_score: c.anomalyScore,
-        future_failure_probability: c.anomalyScore,
-        predicted_future_failure: c.risk === 'CRITICAL' || c.risk === 'HIGH',
-        rds_on_mohm: c.predicted168h,
-        idss_leakage_ua: 37.0,
-        vth_v: 2.9,
-        drain_current_a: 16.1,
-        main_reason: c.reasons || 'Parameters within normal variance',
-        recommended_action: c.risk === 'CRITICAL' ? 'Immediate review hold' : 'Continue screening'
-      })));
-      setLoadingFallback(false);
+      if (comps && comps.length > 0) {
+        setFallbackComponents(comps.map(c => ({
+          component_id: c.id,
+          lot_id: c.lotId,
+          risk_level: c.risk,
+          is_anomaly: c.lotRelativeBehaviour === 'ANOMALOUS',
+          anomaly_risk_score: c.anomalyScore,
+          future_failure_probability: c.anomalyScore,
+          predicted_future_failure: c.risk === 'CRITICAL' || c.risk === 'HIGH',
+          rds_on_mohm: c.predicted168h,
+          idss_leakage_ua: 37.0,
+          vth_v: 2.9,
+          drain_current_a: 16.1,
+          failure_mode: c.lotRelativeBehaviour === 'ANOMALOUS' ? 'LEAKAGE_DRIFT' : 'NORMAL',
+          main_reason: c.primaryRiskFactor || c.reasons || 'Parameters within normal variance',
+          recommended_action: c.risk === 'CRITICAL' ? 'Immediate review hold' : 'Continue screening'
+        })));
+      }
+      setIsFetching(false);
     }).catch(() => {
-      if (isMounted) setLoadingFallback(false);
+      if (isMounted) setIsFetching(false);
     });
 
     return () => { isMounted = false; };
@@ -90,7 +92,7 @@ export default function LotPage({ params }: { params: Promise<{ lotId: string }>
   const lotData = contextLot || fallbackLot;
   const components = contextComponents || fallbackComponents;
 
-  if (loadingFallback) {
+  if (!lotData && isFetching) {
     return <div className="p-8 font-mono text-xs text-slate-400">Loading lot screening details...</div>;
   }
 

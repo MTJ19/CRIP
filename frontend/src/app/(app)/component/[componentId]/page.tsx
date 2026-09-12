@@ -21,13 +21,12 @@ export default function ComponentPage({ params }: { params: Promise<{ componentI
   // 2. Fallback state if component is not in active context
   const [fallbackComponent, setFallbackComponent] = useState<AnalysisComponent | null>(null);
   const [fallbackTrajectory, setFallbackTrajectory] = useState<Array<{ time: string; value: number | null; predictedValue: number | null; lotAverage: number | null; safetyBoundary: number }>>([]);
-  const [loadingFallback, setLoadingFallback] = useState(false);
+  const [isFetching, setIsFetching] = useState(!contextComponent);
 
   useEffect(() => {
-    if (contextComponent) return; // Already in context
+    if (contextComponent) return;
 
     let isMounted = true;
-    setLoadingFallback(true);
 
     api.getComponent(compId).then(c => {
       if (!isMounted) return;
@@ -44,20 +43,21 @@ export default function ComponentPage({ params }: { params: Promise<{ componentI
           idss_leakage_ua: 37.0,
           vth_v: 2.9,
           drain_current_a: 16.1,
-          main_reason: c.reasons || 'Parameters within normal lot variance',
+          failure_mode: c.lotRelativeBehaviour === 'ANOMALOUS' ? 'LEAKAGE_DRIFT' : 'NORMAL',
+          main_reason: c.primaryRiskFactor || c.reasons || 'Parameters within normal lot variance',
           recommended_action: c.risk === 'CRITICAL' ? 'Immediate quarantine & physical failure analysis' : 'Hold for secondary screening'
         });
       }
+      setIsFetching(false);
+    }).catch(() => {
+      if (isMounted) setIsFetching(false);
     });
 
     api.getTrajectory(compId).then(t => {
-      if (isMounted) {
-        if (t.length > 0) setFallbackTrajectory(t);
-        setLoadingFallback(false);
+      if (isMounted && t.length > 0) {
+        setFallbackTrajectory(t);
       }
-    }).catch(() => {
-      if (isMounted) setLoadingFallback(false);
-    });
+    }).catch(() => {});
 
     return () => { isMounted = false; };
   }, [contextComponent, compId]);
@@ -101,7 +101,7 @@ export default function ComponentPage({ params }: { params: Promise<{ componentI
     return "Clear for standard screening progression";
   }, [component]);
 
-  if (loadingFallback) {
+  if (!component && isFetching) {
     return <div className="p-8 font-mono text-xs text-slate-400">Loading component screening inspection...</div>;
   }
 
