@@ -123,7 +123,7 @@ export async function getLatestDashboardAnalysisFromSupabase(targetRunId?: strin
 
     // Also fetch 72h measurements for these components if available
     const compIds = Array.from(riskMap.keys());
-    let measurementMap = new Map();
+    const measurementMap = new Map();
     if (compIds.length > 0) {
       const { data: measurements } = await supabase
         .from('component_measurements')

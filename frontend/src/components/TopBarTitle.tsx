@@ -6,13 +6,15 @@ export default function TopBarTitle() {
   
   let title = "Overview";
   if (pathname === '/upload' || pathname.startsWith('/models')) title = "Workspace";
+  else if (pathname.startsWith('/history')) title = "Analysis History";
   else if (pathname.startsWith('/lot')) title = "Lots";
   else if (pathname.startsWith('/component')) title = "Components";
+  else if (pathname.startsWith('/alerts')) title = "Priority Alerts";
   else if (pathname.startsWith('/reports')) title = "Reports";
   else if (pathname.startsWith('/settings')) title = "Settings";
 
   return (
-    <span className="bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+    <span className="text-xl font-bold text-white tracking-tight">
       {title}
     </span>
   );

@@ -10,6 +10,7 @@ export interface ComponentDetails {
   predicted168h: number;
   risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   status: string;
+  reasons?: string;
 }
 
 export function getDemoComponentsForLot(lotId: string): ComponentDetails[] {

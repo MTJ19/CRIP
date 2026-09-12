@@ -146,7 +146,7 @@ export default function LandingPage() {
       <section id="why-crip" className="py-24 bg-[#0a0b0e] border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Why Thresholds Aren't Enough</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Why Thresholds Aren&apos;t Enough</h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
               CRIP looks beyond absolute limits to identify components whose behaviour is abnormal relative to their own lot.
             </p>
@@ -258,7 +258,7 @@ export default function LandingPage() {
       <section className="py-24 bg-[#0A0A0C] border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row-reverse items-center gap-16">
           <div className="w-full md:w-1/2">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Don't Just Flag It.<br/>Explain It.</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Don&apos;t Just Flag It.<br/>Explain It.</h2>
             <p className="text-slate-400 leading-relaxed mb-6">
               A QA inspector should understand exactly <strong>why</strong> the model flagged a component. CRIP breaks down the anomaly score into individual contributing risk factors.
             </p>
