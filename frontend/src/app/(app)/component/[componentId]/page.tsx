@@ -213,11 +213,12 @@ export default function ComponentPage({ params }: { params: Promise<{ componentI
 
           <div className="h-72 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trajectory} margin={{ top: 20, right: 30, left: -10, bottom: 5 }}>
+              <LineChart accessibilityLayer={false} data={trajectory} margin={{ top: 20, right: 30, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff08" />
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} domain={[30, 50]} />
                 <Tooltip 
+                  cursor={false}
                   contentStyle={{ backgroundColor: '#1c1f26', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }} 
                   formatter={(val: unknown) => [`${val} mΩ`, 'Resistance']}
                 />

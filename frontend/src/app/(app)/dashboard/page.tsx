@@ -269,11 +269,11 @@ export default function DashboardPage() {
 
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={failureModeData} margin={{ top: 15, right: 10, left: -20, bottom: 5 }} barGap={6}>
+              <BarChart accessibilityLayer={false} data={failureModeData} margin={{ top: 15, right: 10, left: -20, bottom: 5 }} barGap={6}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff08" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Tooltip cursor={{ fill: '#ffffff05' }} contentStyle={{ backgroundColor: '#1c1f26', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                <Tooltip cursor={false} contentStyle={{ backgroundColor: '#1c1f26', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={46}>
                   {failureModeData.map((entry, index) => {
                     const colors = ['#ef4444', '#f97316', '#eab308', '#a855f7', '#ec4899'];

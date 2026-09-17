@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "CRIP | Component Reliability Intelligence Platform",
-  description: "AI-Driven Anomaly Detection in Component Burn-In & Screening",
+  title: "CRIP | Component Screening & Drift Platform",
+  description: "Early Anomaly Detection in Component Burn-In & Screening",
 };
 
 export default function RootLayout({
