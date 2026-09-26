@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Tooltip, CartesianGrid } from 'recharts';
 import { AlertCircle, CheckCircle, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { useAnalysis } from '@/context/AnalysisContext';
+import { IndustrialLoader } from '@/components/IndustrialLoader';
 
 export default function ComponentPage({ params }: { params: Promise<{ componentId: string }> }) {
   const resolvedParams = use(params);
@@ -102,7 +103,7 @@ export default function ComponentPage({ params }: { params: Promise<{ componentI
   }, [component]);
 
   if (!component && isFetching) {
-    return <div className="p-8 font-mono text-xs text-slate-400">Loading component screening inspection...</div>;
+    return <IndustrialLoader message="Loading component screening inspection..." />;
   }
 
   if (!component) {

@@ -5,6 +5,7 @@ import { GlassPanel, GlassHeader, GlassBadge } from '@/components/ui-glass';
 import Link from 'next/link';
 import { AlertTriangle, ArrowLeft, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useAnalysis } from '@/context/AnalysisContext';
+import { IndustrialLoader } from '@/components/IndustrialLoader';
 
 export default function LotPage({ params }: { params: Promise<{ lotId: string }> }) {
   const resolvedParams = use(params);
@@ -93,7 +94,7 @@ export default function LotPage({ params }: { params: Promise<{ lotId: string }>
   const components = contextComponents || fallbackComponents;
 
   if (!lotData && isFetching) {
-    return <div className="p-8 font-mono text-xs text-slate-400">Loading lot screening details...</div>;
+    return <IndustrialLoader message="Loading lot screening details..." />;
   }
 
   if (!lotData) {

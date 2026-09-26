@@ -77,3 +77,82 @@ svg.recharts-surface:focus-visible {
   stroke: transparent !important;
   opacity: 0 !important;
 }
+
+/* Industrial Dual Rotating Spinners */
+@keyframes spin-clockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-counter {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulse-radar {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+.animate-spin-clockwise-slow {
+  animation: spin-clockwise 3.6s linear infinite;
+}
+
+.animate-spin-counter-slow {
+  animation: spin-counter 2.4s linear infinite;
+}
+
+.animate-spin-clockwise-fast {
+  animation: spin-clockwise 1.6s linear infinite;
+}
+
+.animate-spin-counter-fast {
+  animation: spin-counter 1.2s linear infinite;
+}
+
+.animate-pulse-radar {
+  animation: pulse-radar 2.5s ease-in-out infinite;
+}
+
+/* Two Meshing Industrial Rotating Gears */
+@keyframes spin-gear-main {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-gear-sub {
+  0% {
+    transform: rotate(10deg);
+  }
+  100% {
+    transform: rotate(-470deg);
+  }
+}
+
+.animate-gear-main {
+  animation: spin-gear-main 4s linear infinite;
+}
+
+.animate-gear-sub {
+  animation: spin-gear-sub 4s linear infinite;
+}
+
+

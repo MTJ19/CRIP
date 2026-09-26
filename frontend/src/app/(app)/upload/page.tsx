@@ -1,10 +1,10 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassPanel } from '@/components/ui-glass';
-import { 
-  UploadCloud, ArrowRight, FileSpreadsheet, CheckCircle2, 
-  AlertTriangle, ShieldAlert, Cpu, Download, RefreshCw, 
+import {
+  UploadCloud, ArrowRight, FileSpreadsheet, CheckCircle2,
+  AlertTriangle, ShieldAlert, Cpu, Download, RefreshCw,
   X, Check, Sparkles, ChevronRight, Activity, Database, AlertCircle
 } from 'lucide-react';
 import { api, AnalysisRecord, ValidationSummary } from '@/services/api';
@@ -12,13 +12,20 @@ import { useAnalysis } from '@/context/AnalysisContext';
 
 export default function WorkspacePage() {
   const router = useRouter();
-  const { setAnalysisData, setDbStatusState } = useAnalysis();
-  
+  const { currentAnalysis, setAnalysisData, setDbStatusState } = useAnalysis();
+
   // Workspace Mode: 'upload' (primary 5-step flow) vs 'manual' (single component tester)
   const [activeTab, setActiveTab] = useState<'upload' | 'manual'>('upload');
 
-  // 5-Step Workflow: 1: 'upload' -> 2: 'preview' -> 3: 'validating' / 'validated' -> 4: 'analyzing' -> 5: 'summary'
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  // Step initialization: if user previously had results and hasn't explicitly clicked "Upload Another Dataset", start at Step 5
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(() => {
+    if (typeof window !== 'undefined') {
+      const mode = localStorage.getItem('crip_workspace_mode');
+      if (mode === 'results') return 5;
+      if (mode === 'upload') return 1;
+    }
+    return 1;
+  });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<ValidationSummary | null>(null);
@@ -27,6 +34,26 @@ export default function WorkspacePage() {
   const [analysisProgressStep, setAnalysisProgressStep] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<AnalysisRecord | null>(null);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
+
+  // Active analysis record (either from current upload run or persisted AnalysisContext)
+  const activeResult = analysisResult || currentAnalysis;
+
+  // Sync step with localStorage mode and activeResult
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('new') === 'true' || urlParams.get('reset') === 'true') {
+      localStorage.setItem('crip_workspace_mode', 'upload');
+      setStep(1);
+      return;
+    }
+
+    const mode = localStorage.getItem('crip_workspace_mode');
+    // If the user previously completed an analysis and hasn't reset, maintain Step 5
+    if (mode === 'results' && activeResult && step !== 5) {
+      setStep(5);
+    }
+  }, [activeResult, step]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -120,7 +147,13 @@ export default function WorkspacePage() {
     setFilePreview(null);
     setAnalysisResult(null);
     setWorkflowError(null);
+    setAnalysisProgressStep(0);
     setStep(1);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('crip_workspace_mode', 'upload');
+      localStorage.removeItem('crip_workspace_last_analysis_id');
+      sessionStorage.removeItem('crip_workspace_view_mode');
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -202,6 +235,10 @@ export default function WorkspacePage() {
       setAnalysisResult(res);
       setAnalysisData(res);
       setDbStatusState('saved', 'Database Saved');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('crip_workspace_mode', 'results');
+        localStorage.setItem('crip_workspace_last_analysis_id', res.analysis_id);
+      }
       setStep(5); // Move to Analysis Summary
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Analysis failed';
@@ -217,8 +254,8 @@ export default function WorkspacePage() {
   // Download Sample Template
   // -------------------------------------------------------------
   const handleDownloadTemplate = () => {
-    const csvContent = 
-`component_id,lot_id,test_hour,stress_temp_c,stress_vds_v,gate_drive_v,vth_v,rds_on_mohm,idss_leakage_ua,drain_current_a
+    const csvContent =
+      `component_id,lot_id,test_hour,stress_temp_c,stress_vds_v,gate_drive_v,vth_v,rds_on_mohm,idss_leakage_ua,drain_current_a
 M00001,L01,0,125.0,80.0,10.0,2.89,33.50,37.1,16.2
 M00001,L01,72,125.0,80.0,10.0,2.91,33.90,39.0,16.1
 M00002,L01,0,125.0,80.0,10.0,2.90,33.80,36.5,16.2
@@ -265,7 +302,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
 
   return (
     <div className="max-w-6xl mx-auto w-full space-y-8 pb-16">
-      
+
       {/* Workspace Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/5 pb-6">
         <div>
@@ -279,11 +316,10 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
         <div className="flex items-center space-x-2 bg-[#171920] p-1.5 rounded-xl border border-white/10">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`px-4 py-2 rounded-lg text-xs font-medium font-mono transition-all flex items-center space-x-2 ${
-              activeTab === 'upload' 
-                ? 'bg-indigo-600 text-white shadow-lg' 
+            className={`px-4 py-2 rounded-lg text-xs font-medium font-mono transition-all flex items-center space-x-2 ${activeTab === 'upload'
+                ? 'bg-indigo-600 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+              }`}
           >
             <UploadCloud className="w-4 h-4" />
             <span>Upload Dataset</span>
@@ -291,11 +327,10 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
 
           <button
             onClick={() => setActiveTab('manual')}
-            className={`px-4 py-2 rounded-lg text-xs font-medium font-mono transition-all flex items-center space-x-2 ${
-              activeTab === 'manual' 
-                ? 'bg-indigo-600 text-white shadow-lg' 
+            className={`px-4 py-2 rounded-lg text-xs font-medium font-mono transition-all flex items-center space-x-2 ${activeTab === 'manual'
+                ? 'bg-indigo-600 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+              }`}
           >
             <Cpu className="w-4 h-4" />
             <span>Test Component Manually</span>
@@ -322,7 +357,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
       {/* ========================================================================= */}
       {activeTab === 'upload' && (
         <div className="space-y-8">
-          
+
           {/* Workflow Stepper Indicator */}
           <div className="grid grid-cols-5 gap-2 font-mono text-xs">
             {[
@@ -335,23 +370,21 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
               const isPast = step > s.num;
               const isCurrent = step === s.num;
               return (
-                <div 
-                  key={s.num} 
-                  className={`p-3 rounded-xl border flex items-center space-x-2.5 transition-all ${
-                    isCurrent 
-                      ? 'bg-indigo-600/15 border-indigo-500/50 text-white font-bold' 
-                      : isPast 
-                      ? 'bg-[#171920] border-emerald-500/30 text-emerald-400' 
-                      : 'bg-[#171920]/40 border-white/5 text-slate-500'
-                  }`}
+                <div
+                  key={s.num}
+                  className={`p-3 rounded-xl border flex items-center space-x-2.5 transition-all ${isCurrent
+                      ? 'bg-indigo-600/15 border-indigo-500/50 text-white font-bold'
+                      : isPast
+                        ? 'bg-[#171920] border-emerald-500/30 text-emerald-400'
+                        : 'bg-[#171920]/40 border-white/5 text-slate-500'
+                    }`}
                 >
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    isCurrent 
-                      ? 'bg-indigo-600 text-white' 
-                      : isPast 
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-                      : 'bg-white/5 text-slate-500'
-                  }`}>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isCurrent
+                      ? 'bg-indigo-600 text-white'
+                      : isPast
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-white/5 text-slate-500'
+                    }`}>
                     {isPast ? <Check className="w-3 h-3" /> : s.num}
                   </div>
                   <span className="truncate">{s.label}</span>
@@ -366,12 +399,12 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
           {step === 1 && (
             <div className="space-y-6">
               <GlassPanel className="p-10 flex flex-col items-center justify-center text-center border-dashed border-white/15 hover:border-indigo-500/40 transition-all group">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileSelect} 
-                  accept=".csv" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept=".csv"
+                  className="hidden"
                 />
 
                 <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
@@ -710,15 +743,14 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
                   const isDone = analysisProgressStep > taskNum;
                   const isCurrent = analysisProgressStep === taskNum;
                   return (
-                    <div 
+                    <div
                       key={task}
-                      className={`p-3 rounded-lg border flex items-center justify-between transition-colors ${
-                        isDone 
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
-                          : isCurrent 
-                          ? 'bg-indigo-600/20 border-indigo-500/40 text-white font-bold' 
-                          : 'bg-white/5 border-white/5 text-slate-500'
-                      }`}
+                      className={`p-3 rounded-lg border flex items-center justify-between transition-colors ${isDone
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : isCurrent
+                            ? 'bg-indigo-600/20 border-indigo-500/40 text-white font-bold'
+                            : 'bg-white/5 border-white/5 text-slate-500'
+                        }`}
                     >
                       <span>{task}</span>
                       {isDone ? (
@@ -736,7 +768,15 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
           {/* ------------------------------------------------------------- */}
           {/* STEP 5: ANALYSIS SUMMARY */}
           {/* ------------------------------------------------------------- */}
-          {step === 5 && analysisResult && (
+          {step === 5 && !activeResult && (
+            <GlassPanel className="p-12 flex flex-col items-center justify-center text-center font-mono text-xs text-slate-400 space-y-4">
+              <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin" />
+              <div className="text-sm font-bold text-white">Retrieving screening analysis...</div>
+              <p className="text-slate-500 max-w-sm">Synchronizing dataset telemetry from storage.</p>
+            </GlassPanel>
+          )}
+
+          {step === 5 && activeResult && (
             <GlassPanel className="p-8 space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
                 <div className="flex items-center space-x-3">
@@ -754,7 +794,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
                 <div className="flex items-center space-x-2 font-mono text-xs">
                   <span className="text-slate-500">Analysis ID:</span>
                   <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full font-bold">
-                    {analysisResult.analysis_id}
+                    {activeResult.analysis_id}
                   </span>
                 </div>
               </div>
@@ -763,43 +803,43 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3 font-mono">
                 <div className="bg-[#171920] p-4 rounded-xl border border-white/5">
                   <div className="text-[10px] text-slate-500 uppercase">Dataset</div>
-                  <div className="text-xs font-bold text-white truncate mt-1" title={analysisResult.filename}>
-                    {analysisResult.filename}
+                  <div className="text-xs font-bold text-white truncate mt-1" title={activeResult.filename}>
+                    {activeResult.filename}
                   </div>
                 </div>
 
                 <div className="bg-[#171920] p-4 rounded-xl border border-white/5">
                   <div className="text-[10px] text-slate-500 uppercase">Components</div>
                   <div className="text-xl font-bold text-white mt-1">
-                    {analysisResult.summary.total_components.toLocaleString()}
+                    {activeResult.summary.total_components.toLocaleString()}
                   </div>
                 </div>
 
                 <div className="bg-[#171920] p-4 rounded-xl border border-white/5">
                   <div className="text-[10px] text-slate-500 uppercase">Lots</div>
                   <div className="text-xl font-bold text-white mt-1">
-                    {analysisResult.lot_breakdown?.length || 10}
+                    {activeResult.lot_breakdown?.length || 10}
                   </div>
                 </div>
 
                 <div className="bg-[#171920] p-4 rounded-xl border border-white/5">
                   <div className="text-[10px] text-amber-400 uppercase">Needs Attention</div>
                   <div className="text-xl font-bold text-amber-400 mt-1">
-                    {analysisResult.summary.total_anomalies}
+                    {activeResult.summary.total_anomalies}
                   </div>
                 </div>
 
                 <div className="bg-[#171920] p-4 rounded-xl border border-white/5">
                   <div className="text-[10px] text-rose-400 uppercase">Critical</div>
                   <div className="text-xl font-bold text-rose-400 mt-1">
-                    {analysisResult.summary.critical_risk_count}
+                    {activeResult.summary.critical_risk_count}
                   </div>
                 </div>
 
                 <div className="bg-[#171920] p-4 rounded-xl border border-white/5">
                   <div className="text-[10px] text-yellow-400 uppercase">High Risk</div>
                   <div className="text-xl font-bold text-yellow-400 mt-1">
-                    {analysisResult.summary.high_risk_count}
+                    {activeResult.summary.high_risk_count}
                   </div>
                 </div>
               </div>
@@ -822,7 +862,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
                   </button>
 
                   <button
-                    onClick={() => router.push(`/dashboard?analysis_id=${analysisResult.analysis_id}`)}
+                    onClick={() => router.push(`/dashboard?analysis_id=${activeResult.analysis_id}`)}
                     className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] flex items-center space-x-2"
                   >
                     <span>View Results →</span>
@@ -850,7 +890,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
 
             <div className="flex items-center space-x-2 font-mono text-xs">
               <span className="text-slate-500 text-[11px]">Quick Presets:</span>
-              <button 
+              <button
                 onClick={() => {
                   setVth0(2.90); setVth72(2.92); setRds0(33.5); setRds72(34.0); setIdss0(37.0); setIdss72(39.0); setDrain0(16.2); setDrain72(16.1);
                 }}
@@ -858,7 +898,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
               >
                 Normal
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setVth0(2.90); setVth72(3.75); setRds0(33.5); setRds72(34.8); setIdss0(37.0); setIdss72(42.0); setDrain0(16.2); setDrain72(15.8);
                 }}
@@ -866,7 +906,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
               >
                 Vth Shift
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setVth0(2.90); setVth72(2.92); setRds0(33.5); setRds72(48.5); setIdss0(37.0); setIdss72(40.0); setDrain0(16.2); setDrain72(14.5);
                 }}
@@ -874,7 +914,7 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
               >
                 RDS Exceedance
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setVth0(2.88); setVth72(2.91); setRds0(33.8); setRds72(34.2); setIdss0(38.0); setIdss72(185.0); setDrain0(16.1); setDrain72(15.9);
                 }}
@@ -989,12 +1029,11 @@ M00003,L01,72,125.0,80.0,10.0,3.65,49.20,182.0,14.7`;
             <div className="bg-[#171920] p-6 rounded-2xl border border-white/10 font-mono text-xs space-y-4">
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <div className="flex items-center space-x-2">
-                  <span className={`px-2.5 py-1 rounded font-bold text-xs ${
-                    manualPrediction.status.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-300' :
-                    manualPrediction.status.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-300' :
-                    manualPrediction.status.severity === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-300' :
-                    'bg-emerald-500/20 text-emerald-300'
-                  }`}>
+                  <span className={`px-2.5 py-1 rounded font-bold text-xs ${manualPrediction.status.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-300' :
+                      manualPrediction.status.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-300' :
+                        manualPrediction.status.severity === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-300' :
+                          'bg-emerald-500/20 text-emerald-300'
+                    }`}>
                     {manualPrediction.status.severity}
                   </span>
                   <span className="text-white font-bold">Manual Test Result</span>

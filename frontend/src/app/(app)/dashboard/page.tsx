@@ -11,6 +11,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAnalysis } from '@/context/AnalysisContext';
+import { IndustrialLoader } from '@/components/IndustrialLoader';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -70,12 +71,7 @@ export default function DashboardPage() {
   const paginatedComponents = filteredComponents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 font-mono text-xs text-slate-400">
-        <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
-        <div>Loading active screening analysis...</div>
-      </div>
-    );
+    return <IndustrialLoader message="Loading active screening analysis..." />;
   }
 
   // Proper Empty State (PART 17)
